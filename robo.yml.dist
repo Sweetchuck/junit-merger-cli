@@ -1,0 +1,39 @@
+php:
+    executables:
+        coverage_reporter_pcov:
+            ##
+            # For example:
+            # PHPRC: '/path/to/custom.php.ini'
+            # PHP_INI_SCAN_DIR: '/path/to/my-ini-dir'
+            ##
+            envVars: {}
+            binary: 'php'
+            args:
+                pcov:
+                    weight: 1
+                    enabled: true
+                    args:
+                        - '-d'
+                        - 'extension=pcov'
+
+        coverage_reporter_phpdbg:
+            envVars: {}
+            binary: 'phpdbg'
+            args:
+                qrr:
+                    weight: 0
+                    enabled: true
+                    args:
+                        - '-qrr'
+
+        coverage_reporter_xdebug:
+            envVars:
+                XDEBUG_MODE: 'coverage'
+            binary: 'php'
+            args:
+                xdebug:
+                    enabled: true
+                    weight: 0
+                    args:
+                        - '-d'
+                        - 'zend_extension=xdebug'

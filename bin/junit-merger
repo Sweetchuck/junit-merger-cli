@@ -1,0 +1,38 @@
+#!/usr/bin/env php
+<?php
+
+use Sweetchuck\JunitMergerCli\Application;
+
+$projectRoot = \Phar::running() ?: '.';
+
+$vendorDir = 'vendor';
+
+$autoloadPaths = [
+    "$projectRoot/$vendorDir/autoload.php",
+];
+
+if (!is_dir("$projectRoot/$vendorDir")) {
+    $composerFileName = getenv('COMPOSER') ?: 'composer.json';
+    $composer = json_decode(file_get_contents("$projectRoot/$composerFileName"), true);
+    if (isset($composer['config']['vendor-dir'])) {
+        $vendorDir = $composer['config']['vendor-dir'];
+    }
+}
+
+$autoloadPaths[] = "$projectRoot/$vendorDir/autoload.php";
+$autoloadPaths[] = __DIR__ . "/../../../autoload.php";
+
+foreach ($autoloadPaths as $autoloadPath) {
+    if (!file_exists($autoloadPath)) {
+        continue;
+    }
+
+    require_once $autoloadPath;
+    break;
+}
+
+$version = '1.x-dev';
+$application = new Application('junit-merger', $version);
+$application->initialize();
+
+exit($application->run());

@@ -1,0 +1,8 @@
+
+/tests/_output/
+/tests/_support/_generated/
+/vendor/
+
+/.git-hooks.local
+/junit-merger.phar
+/robo.yml

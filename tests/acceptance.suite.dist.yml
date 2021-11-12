@@ -1,0 +1,6 @@
+actor: 'AcceptanceTester'
+modules:
+    enabled:
+        - 'Asserts'
+        - 'Cli'
+        - '\Sweetchuck\JunitMergerCli\Test\Helper\Acceptance'
