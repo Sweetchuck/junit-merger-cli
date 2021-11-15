@@ -3,7 +3,8 @@
 
 use Sweetchuck\JunitMergerCli\Application;
 
-$projectRoot = \Phar::running() ?: '.';
+$isPhar = extension_loaded('Phar') && \Phar::running();
+$projectRoot = $isPhar ? \Phar::running() : '.';
 
 $vendorDir = 'vendor';
 
@@ -12,7 +13,11 @@ $autoloadPaths = [
 ];
 
 if (!is_dir("$projectRoot/$vendorDir")) {
-    $composerFileName = getenv('COMPOSER') ?: 'composer.json';
+    $composerFileName = 'composer.json';
+    if (!$isPhar && getenv('COMPOSER')) {
+        $composerFileName = getenv('COMPOSER');
+    }
+
     $composer = json_decode(file_get_contents("$projectRoot/$composerFileName"), true);
     if (isset($composer['config']['vendor-dir'])) {
         $vendorDir = $composer['config']['vendor-dir'];

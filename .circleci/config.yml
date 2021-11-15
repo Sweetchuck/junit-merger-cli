@@ -45,22 +45,53 @@ commands:
         steps:
             -
                 restore_cache:
-                    name: 'Composer - cache restore'
+                    name: 'Composer install – cache restore'
                     keys:
                         - 'composer-{{ checksum "./composer.lock" }}-2'
 
             -
                 run:
-                    name: 'Composer - install'
+                    name: 'Composer install – install'
                     command: |
                         composer install --no-progress
 
             -
                 save_cache:
-                    name: 'Composer - cache save'
+                    name: 'Composer install – cache save'
                     key: 'composer-{{ checksum "./composer.lock" }}-2'
                     paths:
                         - '~/.cache/composer/'
+            -
+                run:
+                  name: 'Composer install – set PATH'
+                  command: |-
+                      echo "export PATH=\"${PWD}/$(composer config bin-dir):\${PATH}\"" >> "${BASH_ENV}"
+            -
+                run:
+                  name: 'Composer install – set phar.ini'
+                  command: |-
+                      echo 'phar.readonly=Off' | sudo tee '/usr/local/etc/php/conf.d/docker-php-ext-phar.ini'
+
+    release_build:
+        description: 'Release build'
+        steps:
+            -
+                run:
+                    name: 'Release build – phar'
+                    command: |
+                        tag="${CIRCLE_TAG}"
+                        if [[ "${tag}" = '' ]] ; then
+                            tag="${CIRCLE_BRANCH}-dev+$(git log -1 --pretty='format:%ct-%h')"
+                        fi
+
+                        robo -v release:build --tag="${tag}"
+                        ./artifacts/junit-merger.phar --version
+            -
+                persist_to_workspace:
+                    name: 'Release build – Store the release artifacts'
+                    root: './artifacts'
+                    paths:
+                        - '*.phar'
 
     lint:
         description: 'Run linters'
@@ -68,23 +99,81 @@ commands:
             -
                 run:
                     name: 'Run linters'
-                    command: '"./$(composer config bin-dir)/robo" lint'
+                    command: 'robo lint'
 
     test:
         description: 'Run tests'
         steps:
             -
+                attach_workspace:
+                    name: 'Run tests – restore ./artifacts/'
+                    at: './artifacts'
+            -
                 run:
-                    name: 'Codeception - unit'
-                    command: '"./$(composer config bin-dir)/robo" test unit'
+                    name: 'Run tests – unit'
+                    command: 'robo test unit'
             -
                 codecov/upload:
                     flags: 'unit'
                     file: './tests/_output/machine/coverage/unit/coverage.xml'
             -
+                run:
+                    name: 'Run tests – acceptance'
+                    command: 'robo test acceptance'
+            -
+                codecov/upload:
+                    flags: 'acceptance'
+                    file: './tests/_output/machine/coverage/acceptance/coverage.xml'
+            -
                 store_test_results:
-                    name: 'Store unit test results'
+                    name: 'Run tests – Store test results'
                     path: './tests/_output/machine/junit'
+
+    release_publish:
+        description: 'Publish release'
+        steps:
+            -
+                run:
+                    name: 'Publish release – install gh'
+                    command: |-
+                        curl \
+                            -fsSL \
+                            https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+                        | \
+                            sudo gpg \
+                                --dearmor \
+                                -o /usr/share/keyrings/githubcli-archive-keyring.gpg
+
+                        echo \
+                            "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+                        | \
+                            sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+
+                        sudo apt update
+                        sudo apt install gh
+            -
+                attach_workspace:
+                    name: 'Publish release – restore ./artifacts/'
+                    at: './artifacts'
+            -
+                run:
+                    name: 'Publish release – create and upload'
+                    command: |
+                        repo="${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"
+                        tag="$(./artifacts/junit-merger.phar --version | sed --regexp-extended --expression 's/^.+? //g')"
+                        title="${tag}"
+                        notes="${tag}"
+
+                        gh release create \
+                            --repo "${repo}" \
+                            --title "${title}" \
+                            --notes "${notes}" \
+                            "${tag}"
+
+                        gh release upload \
+                            --repo "${repo}" \
+                            "${tag}" \
+                            './artifacts/junit-merger.phar'
 
 jobs:
     build:
@@ -93,6 +182,7 @@ jobs:
         steps:
             - 'checkout'
             - 'composer_install'
+            - 'release_build'
     lint:
         executor: 'php_min'
         working_directory: '~/repo'
@@ -114,21 +204,45 @@ jobs:
             - 'checkout'
             - 'composer_install'
             - 'test'
+    release_publish:
+        executor: 'php_min'
+        working_directory: '~/repo'
+        steps:
+            - 'release_publish'
 
 workflows:
     lint_and_test:
         jobs:
             -
-                build: {}
+                build:
+                    filters: &wf_lint_and_test_job_filter
+                        branches:
+                            only: '/.+/'
+                        tags:
+                            only: &regexp_semver '/^\d+\.\d+\.\d+(\-[^+]+)?(\+.+)?$/'
             -
                 lint:
+                    filters: *wf_lint_and_test_job_filter
                     requires:
                         - 'build'
             -
                 test_php_min:
+                    filters: *wf_lint_and_test_job_filter
                     requires:
                         - 'build'
             -
                 test_php_plus1:
+                    filters: *wf_lint_and_test_job_filter
                     requires:
                         - 'build'
+            -
+                release_publish:
+                    filters:
+                        branches:
+                            ignore: '/.*/'
+                        tags:
+                            only: *regexp_semver
+                    requires:
+                        - 'lint'
+                        - 'test_php_min'
+                        - 'test_php_plus1'

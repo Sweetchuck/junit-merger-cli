@@ -19,9 +19,9 @@ use Sweetchuck\Robo\Git\GitTaskLoader;
 use Sweetchuck\Robo\Phpcs\PhpcsTaskLoader;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Process\Process;
-use Webmozart\PathUtil\Path;
 
 class RoboFile extends Tasks implements LoggerAwareInterface, ConfigAwareInterface
 {
@@ -63,12 +63,15 @@ class RoboFile extends Tasks implements LoggerAwareInterface, ConfigAwareInterfa
      */
     protected string $environmentName = '';
 
+    protected Filesystem $fs;
+
     /**
      * RoboFile constructor.
      */
     public function __construct()
     {
         putenv('COMPOSER_DISABLE_XDEBUG_WARN=1');
+        $this->fs = new Filesystem();
         $this
             ->initComposerInfo()
             ->initEnvVarNamePrefix()
@@ -520,39 +523,47 @@ class RoboFile extends Tasks implements LoggerAwareInterface, ConfigAwareInterfa
     /**
      * Generates an executable PHAR file.
      *
-     * @command phar
+     * @command release:build
      */
-    public function cmdPharExecute(string $destination = './junit-merger.phar')
-    {
-        $fs = new Symfony\Component\Filesystem\Filesystem();
-        if (!$fs->isAbsolutePath($destination)) {
+    public function cmdReleaseBuildExecute(
+        string $destination = './artifacts/junit-merger.phar',
+        array $options = [
+            'tag' => '',
+        ]
+    ) {
+        if (!$this->fs->isAbsolutePath($destination)) {
             $destination = getcwd() . "/$destination";
         }
 
         return $this
             ->collectionBuilder()
-            ->addCode(function (RoboStateData $data): int {
-                $this->mainState = $data;
-                $data['srcDir'] = getcwd();
-
-                return 0;
-            })
-            ->addTask($this->getTaskPharPrepareWorkingDirectory())
-            ->addTask($this->getTaskPharCopyProjectCollect())
-            ->addTask($this->getTaskPharCopyProjectDoIt())
+            ->addCode($this->getTaskReleaseBuildInit())
+            ->addTask($this->getTaskReleaseBuildPrepareWorkingDirectory())
+            ->addTask($this->getTaskReleaseBuildCopyProjectCollect())
+            ->addTask($this->getTaskReleaseBuildPharCopyProjectDoIt())
             ->addTask($this->taskComposerInstall()->option('no-dev'))
-            ->addTask($this->getTaskPharComposerPackagePaths())
-            ->addCode($this->getTaskPharBuild($destination));
+            ->addTask($this->getTaskReleaseBuildComposerPackagePaths())
+            ->addCode($this->getTaskReleaseBuildPhar($destination, $options['tag']));
     }
 
-    protected function getTaskPharPrepareWorkingDirectory(): TaskInterface
+    protected function getTaskReleaseBuildInit(): \Closure
+    {
+        return function (RoboStateData $data): int {
+            $this->mainState = $data;
+            $data['srcDir'] = getcwd();
+
+            return 0;
+        };
+    }
+
+    protected function getTaskReleaseBuildPrepareWorkingDirectory(): TaskInterface
     {
         return $this
             ->taskTmpDir(basename(__DIR__), realpath('..'))
             ->cwd();
     }
 
-    protected function getTaskPharCopyProjectCollect(): TaskInterface
+    protected function getTaskReleaseBuildCopyProjectCollect(): TaskInterface
     {
         return $this
             ->taskGitListFiles()
@@ -560,7 +571,7 @@ class RoboFile extends Tasks implements LoggerAwareInterface, ConfigAwareInterfa
             ->deferTaskConfiguration('setWorkingDirectory', 'srcDir');
     }
 
-    protected function getTaskPharCopyProjectDoIt(): TaskInterface
+    protected function getTaskReleaseBuildPharCopyProjectDoIt(): TaskInterface
     {
         return $this
             ->taskForEach()
@@ -574,7 +585,7 @@ class RoboFile extends Tasks implements LoggerAwareInterface, ConfigAwareInterfa
             });
     }
 
-    protected function getTaskPharComposerPackagePaths(): TaskInterface
+    protected function getTaskReleaseBuildComposerPackagePaths(): TaskInterface
     {
         $task = $this->taskComposerPackagePaths();
         $task->deferTaskConfiguration('setWorkingDirectory', 'path');
@@ -582,9 +593,16 @@ class RoboFile extends Tasks implements LoggerAwareInterface, ConfigAwareInterfa
         return $task;
     }
 
-    protected function getTaskPharBuild(string $pharPathname): \Closure
+    protected function getTaskReleaseBuildPhar(string $pharPathname, string $version): \Closure
     {
-        return function (RoboStateData $data) use ($pharPathname): int {
+        return function () use ($pharPathname, $version): int {
+            $this->logger->info(
+                "Create PHAR; version: {version} ; path: {pharPathname}",
+                [
+                    'pharPathname' => $pharPathname,
+                    'version' => $version,
+                ],
+            );
             $vendorDir = 'vendor';
 
             $filesExtra = [
@@ -600,24 +618,28 @@ class RoboFile extends Tasks implements LoggerAwareInterface, ConfigAwareInterfa
             );
             $files->append(
                 (new Finder())
-                    ->in('./bin/')
-                    ->files()
-                    ->getIterator(),
-            );
-            $files->append(
-                (new Finder())
                     ->in("./$vendorDir/")
                     ->files()
-                    ->notPath("./$vendorDir/bin/")
-                    ->notName('*.md')
+                    ->notPath("psr/log/Psr/Log/Test")
+                    ->notPath("bin")
+                    ->notPath("tests")
                     ->notName('composer.json')
+                    ->notName('composer.lock')
+                    ->notName('codeception*.*')
+                    ->notName('phpcs.xml')
+                    ->notName('phpcs.xml.dist')
+                    ->notName('phpunit.xml')
+                    ->notName('phpunit.xml.dist')
+                    ->notName('robo.yml')
+                    ->notName('robo.yml.dist')
+                    ->notName('RoboFile.php')
+                    ->notName('*.md')
                     ->ignoreVCS(true)
-                    //->followLinks()
                     ->getIterator(),
             );
 
             $packageDirs = (new Finder())
-                ->in('vendor')
+                ->in($vendorDir)
                 ->directories()
                 ->depth(1);
 
@@ -633,11 +655,20 @@ class RoboFile extends Tasks implements LoggerAwareInterface, ConfigAwareInterfa
                     ->notPath('bin')
                     ->notPath('reports')
                     ->notPath('tests')
+                    ->notPath('Test')
                     ->notPath('vendor')
-                    ->notName('README.md')
                     ->notName('codeception.*')
                     ->notName('composer.json')
-                    ->notName('composer.lock');
+                    ->notName('composer.lock')
+                    ->notName('phpcs.xml')
+                    ->notName('phpcs.xml.dist')
+                    ->notName('phpunit.xml')
+                    ->notName('phpunit.xml.dist')
+                    ->notName('robo.yml')
+                    ->notName('robo.yml.dist')
+                    ->notName('RoboFile.php')
+                    ->notName('*.md')
+                    ->ignoreVCS(true);
                 foreach ($packageFiles as $packageFile) {
                     $filesExtra[] = $this->mainState['path']
                         . '/' . $packageDir->getPathname()
@@ -655,11 +686,20 @@ class RoboFile extends Tasks implements LoggerAwareInterface, ConfigAwareInterfa
             $startFile = "bin/$appName";
             $startContent = file($startFile);
             array_shift($startContent);
+            if ($version !== '') {
+                $startContent = preg_replace(
+                    '/^\$version = \'.*?\';$/m',
+                    sprintf('$version = %s;', var_export($version, true)),
+                    $startContent,
+                );
+            }
+
+            $this->fs->mkdir(dirname($pharPathname), 0777 - umask());
             $phar = new \Phar($pharPathname, 0);
             $phar->buildFromIterator($files, $this->mainState['path']);
             $phar->addFromString($startFile, implode('', $startContent));
             $phar->setStub($this->getPharStubCode($appName, $startFile));
-            chmod($pharPathname, 0666 - umask() + 0100);
+            chmod($pharPathname, 0777 - umask());
 
             return 0;
         };
@@ -680,5 +720,18 @@ PHP,
             var_export("phar://$appName/", true),
             var_export($startFile, true),
         );
+    }
+
+    /**
+     * @command phar:content
+     */
+    public function cmdPharContentExecute(string $path = './artifacts/junit-merger.phar')
+    {
+        $path = realpath($path);
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator("phar://$path"));
+        $output = $this->output();
+        foreach ($files as $file) {
+            $output->writeln(str_replace("phar://$path", '', $file));
+        }
     }
 }
