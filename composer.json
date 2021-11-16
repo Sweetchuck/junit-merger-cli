@@ -1,7 +1,7 @@
 {
     "type": "project",
     "name": "sweetchuck/junit-merger-cli",
-    "description": "@todo project description",
+    "description": "CLI tool to merge two or more JUnit XML files into one.",
     "keywords": [
         "junit"
     ],
