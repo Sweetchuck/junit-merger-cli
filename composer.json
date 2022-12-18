@@ -23,21 +23,19 @@
     "config": {
         "preferred-install": "dist",
         "optimize-autoloader": true,
-        "sort-packages": true
-    },
-    "repositories": {
-        "nuvoleweb/robo-config": {
-            "type": "github",
-            "url": "https://github.com/Sweetchuck/robo-config"
+        "sort-packages": true,
+        "allow-plugins": {
+            "sweetchuck/git-hooks": true
         }
     },
+    "repositories": {},
     "require": {
         "php": ">=7.4",
         "ext-json": "*",
         "psr/log": "^1.1",
         "sweetchuck/junit-merger": "1.x-dev",
-        "symfony/console": "^5.1",
-        "symfony/dependency-injection": "^5.3"
+        "symfony/console": "^5.1 || ^6.0",
+        "symfony/dependency-injection": "^5.3 || ^6.0"
     },
     "require-dev": {
         "codeception/codeception": "^4.1",
@@ -45,14 +43,16 @@
         "codeception/module-cli": "^1.1",
         "consolidation/robo": "^3.0",
         "mikey179/vfsstream": "^1.6",
-        "nuvoleweb/robo-config": "3.x-dev",
+        "nuvoleweb/robo-config": "^2.0",
         "squizlabs/php_codesniffer": "^3.6",
         "sweetchuck/git-hooks": "2.x-dev",
         "sweetchuck/robo-composer": "2.x-dev",
         "sweetchuck/robo-git": "2.x-dev",
         "sweetchuck/robo-phpcs": "2.x-dev",
-        "symfony/error-handler": "^5.3",
-        "symfony/finder": "^5.3"
+        "sweetchuck/utils": "1.x-dev",
+        "symfony/error-handler": "^5.3 || ^6.0",
+        "symfony/finder": "^5.3 || ^6.0",
+        "symfony/yaml": "^5.4 || ^6.0"
     },
     "bin": [
         "./bin/junit-merger"

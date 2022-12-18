@@ -9,10 +9,10 @@
 
     <file>./tests/</file>
     <exclude-pattern>./tests/_data/</exclude-pattern>
-    <exclude-pattern>./tests/_output/</exclude-pattern>
+    <exclude-pattern>./tests/_log/</exclude-pattern>
     <exclude-pattern>./tests/_support/generated</exclude-pattern>
 
-    <file>RoboFile.php</file>
+    <file>./RoboFile.php</file>
 
     <rule ref="PSR2" />
     <rule ref="PSR2.Methods.MethodDeclaration.Underscore">
