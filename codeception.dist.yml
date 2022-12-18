@@ -2,11 +2,11 @@
 namespace: 'Sweetchuck\JunitMergerCli\Test'
 
 paths:
+    tests: 'tests'
     data: 'tests/_data'
     envs: 'tests/_envs'
-    output: 'tests/_output'
+    log: 'tests/_log'
     support: 'tests/_support'
-    tests: 'tests'
 
 settings:
     colors: true

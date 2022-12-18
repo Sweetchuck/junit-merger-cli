@@ -1,10 +1,15 @@
 
 /artifacts/
 
-/tests/_output/
+/tests/_log/
 /tests/_support/_generated/
+/tests/*.suite.yml
+/codeception.yml
+
 /vendor/
 
 /.git-hooks.local
-/junit-merger.phar
+
+/phpcs.xml
+
 /robo.yml

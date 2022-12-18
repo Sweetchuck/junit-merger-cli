@@ -7,9 +7,6 @@ orbs:
 .env_common: &env_common
     SHELL: '/bin/bash'
 
-.env_xdebug: &env_xdebug
-    XDEBUG_MODE: 'coverage'
-
 .env_composer: &env_composer
     COMPOSER_NO_INTERACTION: '1'
     COMPOSER_MEMORY_LIMIT: '-1'
@@ -18,28 +15,59 @@ orbs:
 
 executors:
     php_min:
+        resource_class: 'small'
         environment:
             <<: *env_common
-            <<: *env_xdebug
             <<: *env_composer
 
         docker:
             -
                 name: 'main'
-                image: 'circleci/php:7.4'
+                image: 'cimg/php:7.4'
 
     php_plus1:
+        resource_class: 'small'
         environment:
             <<: *env_common
-            <<: *env_xdebug
             <<: *env_composer
 
         docker:
             -
                 name: 'main'
-                image: 'circleci/php:8.0'
+                image: 'cimg/php:8.0'
+
+    php_plus2:
+        resource_class: 'small'
+        environment:
+            <<: *env_common
+            <<: *env_composer
+
+        docker:
+            -
+                name: 'main'
+                image: 'cimg/php:8.1'
 
 commands:
+    install_php_extension_pcov:
+        description: 'Install PCOV PHP extension'
+        steps:
+            -
+                run:
+                    name: 'Install PCOV PHP extension - pecl install pcov'
+                    command: |
+                        if php -m | grep pcov ; then
+                            exit 0
+                        fi
+
+                        sudo pecl install pcov
+                        if php -m | grep pcov ; then
+                            exit 0
+                        fi
+
+                        scanDir="$(php -i | grep --color=never --only-matching --perl-regexp '(?<=^Scan this dir for additional \.ini files => ).+')"
+                        echo 'extension=pcov' | sudo tee "${scanDir}/pcov.ini"
+                        php -m | grep pcov
+
     composer_install:
         description: 'Install Composer dependencies with cache restore and save'
         steps:
@@ -63,14 +91,15 @@ commands:
                         - '~/.cache/composer/'
             -
                 run:
-                  name: 'Composer install – set PATH'
-                  command: |-
-                      echo "export PATH=\"${PWD}/$(composer config bin-dir):\${PATH}\"" >> "${BASH_ENV}"
+                    name: 'Composer install – set PATH'
+                    command: |-
+                        echo "export PATH=\"${PWD}/$(composer config bin-dir):\${PATH}\"" >> "${BASH_ENV}"
             -
                 run:
-                  name: 'Composer install – set phar.ini'
-                  command: |-
-                      echo 'phar.readonly=Off' | sudo tee '/usr/local/etc/php/conf.d/docker-php-ext-phar.ini'
+                    name: 'Composer install – set phar.ini'
+                    command: |-
+                        scanDir="$(php -i | grep --color=never --only-matching --perl-regexp '(?<=^Scan this dir for additional \.ini files => ).+')"
+                        echo 'phar.readonly=Off' | sudo tee "${scanDir}/docker-php-ext-phar.ini"
 
     release_build:
         description: 'Release build'
@@ -99,7 +128,8 @@ commands:
             -
                 run:
                     name: 'Run linters'
-                    command: 'robo lint'
+                    command: |
+                        robo --ansi lint
 
     test:
         description: 'Run tests'
@@ -111,23 +141,25 @@ commands:
             -
                 run:
                     name: 'Run tests – unit'
-                    command: 'robo test unit'
+                    command: |
+                        robo --ansi test unit
             -
                 codecov/upload:
                     flags: 'unit'
-                    file: './tests/_output/machine/coverage/unit/coverage.xml'
+                    file: './tests/_log/machine/coverage/unit/coverage.xml'
             -
                 run:
                     name: 'Run tests – acceptance'
-                    command: 'robo test acceptance'
+                    command: |
+                        robo --ansi test acceptance
             -
                 codecov/upload:
                     flags: 'acceptance'
-                    file: './tests/_output/machine/coverage/acceptance/coverage.xml'
+                    file: './tests/_log/machine/coverage/acceptance/coverage.xml'
             -
                 store_test_results:
                     name: 'Run tests – Store test results'
-                    path: './tests/_output/machine/junit'
+                    path: './tests/_log/machine/junit'
 
     release_publish:
         description: 'Publish release'
@@ -178,35 +210,28 @@ commands:
 jobs:
     build:
         executor: 'php_min'
-        working_directory: '~/repo'
         steps:
             - 'checkout'
             - 'composer_install'
             - 'release_build'
     lint:
         executor: 'php_min'
-        working_directory: '~/repo'
         steps:
             - 'checkout'
             - 'composer_install'
             - 'lint'
-    test_php_min:
-        executor: 'php_min'
-        working_directory: '~/repo'
+    test:
+        parameters:
+            executor:
+                type: 'string'
+        executor: '<<parameters.executor>>'
         steps:
             - 'checkout'
-            - 'composer_install'
-            - 'test'
-    test_php_plus1:
-        executor: 'php_plus1'
-        working_directory: '~/repo'
-        steps:
-            - 'checkout'
+            - 'install_php_extension_pcov'
             - 'composer_install'
             - 'test'
     release_publish:
         executor: 'php_min'
-        working_directory: '~/repo'
         steps:
             - 'release_publish'
 
@@ -226,15 +251,17 @@ workflows:
                     requires:
                         - 'build'
             -
-                test_php_min:
+                test:
+                    name: 'test_<<matrix.executor>>'
                     filters: *wf_lint_and_test_job_filter
                     requires:
                         - 'build'
-            -
-                test_php_plus1:
-                    filters: *wf_lint_and_test_job_filter
-                    requires:
-                        - 'build'
+                    matrix:
+                        parameters:
+                            executor:
+                                - 'php_min'
+                                - 'php_plus1'
+                                - 'php_plus2'
             -
                 release_publish:
                     filters:
@@ -246,3 +273,4 @@ workflows:
                         - 'lint'
                         - 'test_php_min'
                         - 'test_php_plus1'
+                        - 'test_php_plus2'
