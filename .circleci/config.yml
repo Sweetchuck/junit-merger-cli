@@ -47,6 +47,17 @@ executors:
                 name: 'main'
                 image: 'cimg/php:8.1'
 
+    php_plus3:
+        resource_class: 'small'
+        environment:
+            <<: *env_common
+            <<: *env_composer
+
+        docker:
+            -
+                name: 'main'
+                image: 'cimg/php:8.2'
+
 commands:
     install_php_extension_pcov:
         description: 'Install PCOV PHP extension'
@@ -262,6 +273,7 @@ workflows:
                                 - 'php_min'
                                 - 'php_plus1'
                                 - 'php_plus2'
+                                - 'php_plus3'
             -
                 release_publish:
                     filters:
@@ -274,3 +286,4 @@ workflows:
                         - 'test_php_min'
                         - 'test_php_plus1'
                         - 'test_php_plus2'
+                        - 'test_php_plus3'
