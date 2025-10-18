@@ -36,7 +36,7 @@ foreach ($autoloadPaths as $autoloadPath) {
     break;
 }
 
-$version = '1.x-dev';
+$version = '2.x-dev';
 $application = new Application('junit-merger', $version);
 $application->initialize();
 

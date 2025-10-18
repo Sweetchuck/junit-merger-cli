@@ -6,37 +6,51 @@ namespace Sweetchuck\JunitMergerCli\Command;
 
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
-use Sweetchuck\JunitMerger\JunitMergerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 
-class MergeFiles extends Command implements ContainerAwareInterface, LoggerAwareInterface
+class MergeFiles extends Command implements LoggerAwareInterface
 {
 
-    use ContainerAwareTrait;
     use LoggerAwareTrait;
 
     /**
-     * {@inheritdoc}
+     * @return array<string, \Sweetchuck\JunitMerger\JunitMergerInterface>
      */
-    protected static $defaultName = 'merge:files';
+    public function getHandlers(): array
+    {
+        return $this->handlers;
+    }
 
-    protected array $handlerAllowedValues = [
-        'substr',
-        'dom_read',
-        'dom_read_write',
-    ];
+    /**
+     * @param array<string, \Sweetchuck\JunitMerger\JunitMergerInterface> $handlers
+     */
+    public function setHandlers(array $handlers): static
+    {
+        $this->handlers = $handlers;
+
+        return $this;
+    }
+
+    /**
+     * @param array<string, \Sweetchuck\JunitMerger\JunitMergerInterface> $handlers
+     */
+    public function __construct(
+        ?string $name = null,
+        protected array $handlers = [],
+    ) {
+        parent::__construct($name);
+    }
+
 
     /**
      * {@inheritdoc}
      */
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setDescription('Merges two or more JUnit XML files into one.')
@@ -51,8 +65,11 @@ class MergeFiles extends Command implements ContainerAwareInterface, LoggerAware
                 'handler',
                 'a',
                 InputOption::VALUE_REQUIRED,
-                'Allowed values: ' . implode(', ', $this->handlerAllowedValues),
+                'Allowed values: ' . implode(', ', array_keys($this->handlers)),
                 'substr',
+                function (): array {
+                    return array_keys($this->handlers);
+                },
             )
             ->addArgument(
                 'input-files',
@@ -61,16 +78,15 @@ class MergeFiles extends Command implements ContainerAwareInterface, LoggerAware
             );
     }
 
-    protected function validate(InputInterface $input)
+    protected function validate(InputInterface $input): static
     {
-        $handler = $input->getOption('handler');
-        $handlerServiceId = "junit_merger.$handler";
-        if (!$this->container->has($handlerServiceId)) {
+        $handlerName = $input->getOption('handler');
+        if (!isset($this->handlers[$handlerName])) {
             throw new \RuntimeException(
                 sprintf(
                     'invalid handler: %s; allowed values: %s',
-                    $handler,
-                    implode(', ', $this->handlerAllowedValues),
+                    $handlerName,
+                    implode(', ', array_keys($this->handlers)),
                 ),
             );
         }
@@ -81,7 +97,7 @@ class MergeFiles extends Command implements ContainerAwareInterface, LoggerAware
     /**
      * {@inheritdoc}
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         try {
             $this->validate($input);
@@ -92,8 +108,15 @@ class MergeFiles extends Command implements ContainerAwareInterface, LoggerAware
         }
 
         $inputFiles = $this->createInputFilesIterator($input);
-        $output = $this->createOutput($input);
-        $merger = $this->createMerger($input);
+        try {
+            $output = $this->createOutput($input);
+        } catch (\Throwable $error) {
+            $this->logger->error($error->getMessage());
+
+            return 1;
+        }
+        $handlerName = $input->getOption('handler');
+        $merger = $this->handlers[$handlerName];
 
         $merger->mergeXmlFiles($inputFiles, $output);
         $this->tearDownOutput($output);
@@ -115,9 +138,13 @@ class MergeFiles extends Command implements ContainerAwareInterface, LoggerAware
         // @todo Error handling.
         // @todo Create parent directories.
         $fileName = $input->getOption('output-file');
-        $fileHandler = $fileName === null || $fileName === '' ?
-            \STDOUT
+        $fileHandler = $fileName === null || $fileName === ''
+            ? \STDOUT
             : fopen($fileName, 'w+');
+        if (!$fileHandler) {
+            // @todo Better error message.
+            throw new \RuntimeException();
+        }
 
         return new StreamOutput(
             $fileHandler,
@@ -126,21 +153,12 @@ class MergeFiles extends Command implements ContainerAwareInterface, LoggerAware
         );
     }
 
-    protected function tearDownOutput(OutputInterface $output)
+    protected function tearDownOutput(OutputInterface $output): static
     {
         if ($output instanceof StreamOutput) {
             fclose($output->getStream());
         }
 
         return $this;
-    }
-
-    protected function createMerger(InputInterface $input): JunitMergerInterface
-    {
-        $handler = $input->getOption('handler');
-        $serviceId = "junit_merger.$handler";
-
-        /** @noinspection PhpIncompatibleReturnTypeInspection */
-        return $this->container->get($serviceId);
     }
 }

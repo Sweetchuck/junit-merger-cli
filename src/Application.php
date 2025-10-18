@@ -18,10 +18,7 @@ use Symfony\Component\DependencyInjection\Reference as ServiceReference;
 class Application extends ApplicationBase
 {
 
-    /**
-     * @return $this
-     */
-    public function initialize()
+    public function initialize(): static
     {
         $container = new ContainerBuilder();
 
@@ -36,8 +33,14 @@ class Application extends ApplicationBase
         $container->register('junit_merger.dom_read_write', JunitMergerDomReadWrite::class);
         $container->register('junit_merger.substr', JunitMergerSubstr::class);
 
-        $cmdMerge = new MergeFiles();
-        $cmdMerge->setContainer($container);
+        $cmdMerge = new MergeFiles(
+            name: 'merge:files',
+            handlers: [
+                'dom_read' => $container->get('junit_merger.dom_read'),
+                'dom_read_write' => $container->get('junit_merger.dom_read_write'),
+                'substr' => $container->get('junit_merger.substr'),
+            ],
+        );
         $cmdMerge->setLogger($container->get('logger'));
         $this->add($cmdMerge);
 

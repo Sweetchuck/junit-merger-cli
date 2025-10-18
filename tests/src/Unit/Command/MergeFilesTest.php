@@ -4,20 +4,19 @@ declare(strict_types = 1);
 
 namespace Sweetchuck\JunitMergerCli\Tests\Unit\Command;
 
-use Codeception\Test\Unit;
 use org\bovigo\vfs\vfsStream;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\TestCase;
 use Sweetchuck\JunitMergerCli\Application;
-use Sweetchuck\JunitMergerCli\Test\UnitTester;
+use Sweetchuck\JunitMergerCli\Command\MergeFiles;
 use Symfony\Component\Console\Tester\CommandTester;
 
-/**
- * @covers \Sweetchuck\JunitMergerCli\Command\MergeFiles
- */
-class MergeFilesTest extends Unit
+#[CoversClass(Application::class)]
+#[CoversClass(MergeFiles::class)]
+class MergeFilesTest extends TestCase
 {
-    protected UnitTester $tester;
 
-    public function testExecute()
+    public function testExecute(): void
     {
         $vfs = vfsStream::setup(
             'root',
@@ -26,7 +25,7 @@ class MergeFilesTest extends Unit
                 __FUNCTION__ => [],
             ],
         );
-        $junitMergerFixturesDir = './vendor/sweetchuck/junit-merger/tests/_data/fixtures';
+        $junitMergerFixturesDir = './vendor/sweetchuck/junit-merger/tests/fixtures';
         $outputFile = $vfs->url() . '/' . __FUNCTION__ . '/merged.xml';
 
         $application = new Application();
@@ -49,10 +48,10 @@ class MergeFilesTest extends Unit
             ],
         );
 
-        $this->tester->assertSame(0, $commandTester->getStatusCode(), 'exitCode');
-        $this->tester->assertSame('', $commandTester->getDisplay(), 'stdOutput');
-        $this->tester->assertSame('', $commandTester->getErrorOutput(), 'stdError');
-        $this->tester->assertSame(
+        static::assertSame(0, $commandTester->getStatusCode(), 'exitCode');
+        static::assertSame('', $commandTester->getDisplay(), 'stdOutput');
+        static::assertSame('', $commandTester->getErrorOutput(), 'stdError');
+        static::assertSame(
             file_get_contents("$junitMergerFixturesDir/junit-expected/a-b.xml"),
             file_get_contents($outputFile),
         );

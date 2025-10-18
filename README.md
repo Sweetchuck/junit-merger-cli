@@ -1,7 +1,7 @@
 # JUnit merger
 
-[![CircleCI](https://circleci.com/gh/Sweetchuck/junit-merger-cli/tree/1.x.svg?style=svg)](https://circleci.com/gh/Sweetchuck/junit-merger-cli/?branch=1.x)
-[![codecov](https://codecov.io/gh/Sweetchuck/junit-merger-cli/branch/1.x/graph/badge.svg?token=HSF16OGPyr)](https://app.codecov.io/gh/Sweetchuck/junit-merger-cli/branch/1.x)
+[![CircleCI](https://circleci.com/gh/Sweetchuck/junit-merger-cli/tree/2.x.svg?style=svg)](https://circleci.com/gh/Sweetchuck/junit-merger-cli/?branch=2.x)
+[![codecov](https://codecov.io/gh/Sweetchuck/junit-merger-cli/branch/2.x/graph/badge.svg?token=31M8Tl0Ktr)](https://app.codecov.io/gh/Sweetchuck/junit-merger-cli/tree/2.x)
 
 As the name suggests this CLI tool helps to merge two or more JUnit XML files into one. \
 Under the hood it uses the [JUnit merger library].

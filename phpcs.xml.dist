@@ -4,24 +4,18 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="./vendor/squizlabs/php_codesniffer/phpcs.xsd">
 
-    <file>./bin/</file>
     <file>./src/</file>
-
-    <file>./tests/</file>
-    <exclude-pattern>./tests/_data/</exclude-pattern>
-    <exclude-pattern>./tests/_log/</exclude-pattern>
-    <exclude-pattern>./tests/_support/generated</exclude-pattern>
-
+    <file>./tests/src/</file>
     <file>./RoboFile.php</file>
 
     <rule ref="PSR2" />
-    <rule ref="PSR2.Methods.MethodDeclaration.Underscore">
-        <exclude-pattern>./tests/_support/Helper/</exclude-pattern>
-        <exclude-pattern>./tests/unit/</exclude-pattern>
-        <exclude-pattern>./tests/acceptance/</exclude-pattern>
-    </rule>
     <rule ref="PSR1.Classes.ClassDeclaration.MissingNamespace">
         <exclude-pattern>./RoboFile.php</exclude-pattern>
     </rule>
 
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="ignoreComments" value="true" />
+        </properties>
+    </rule>
 </ruleset>

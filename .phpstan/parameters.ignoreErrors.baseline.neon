@@ -1,0 +1,85 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Call to an undefined method Robo\\Collection\\CollectionBuilder\:\:setAssetNamePrefix\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Call to an undefined method Robo\\Collection\\CollectionBuilder\|Robo\\Collection\\TaskForEach\:\:iterationMessage\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Call to an undefined method Robo\\Collection\\CollectionBuilder\|Robo\\Task\\Composer\\Install\:\:option\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Call to an undefined method Robo\\Collection\\CollectionBuilder\|Robo\\Task\\Filesystem\\FilesystemStack\:\:copy\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Call to an undefined method Robo\\Collection\\CollectionBuilder\|Robo\\Task\\Filesystem\\WorkDir\:\:cwd\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Call to an undefined method Robo\\Collection\\CollectionBuilder\|Sweetchuck\\Robo\\Git\\Task\\GitListFilesTask\:\:setAssetNamePrefix\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Call to an undefined method Robo\\Collection\\CollectionBuilder\|Sweetchuck\\Robo\\Git\\Task\\GitListStagedFilesTask\:\:setPaths\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Call to an undefined method Robo\\Collection\\CollectionBuilder\|Sweetchuck\\Robo\\Git\\Task\\GitReadStagedFilesTask\:\:setCommandOnly\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Call to an undefined method Robo\\Collection\\CollectionBuilder\|Sweetchuck\\Robo\\Phpstan\\Task\\AnalyzeTask\:\:setNoProgress\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Call to an undefined method Robo\\Collection\\TaskForEach\:\:deferTaskConfiguration\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Call to an undefined method Sweetchuck\\Robo\\Git\\Task\\GitListFilesTask\:\:deferTaskConfiguration\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Call to an undefined method Sweetchuck\\Robo\\Git\\Task\\GitReadStagedFilesTask\:\:deferTaskConfiguration\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../RoboFile.php
+
+		-
+			message: '#^Parameter \#1 \$logger of method Sweetchuck\\JunitMergerCli\\Command\\MergeFiles\:\:setLogger\(\) expects Psr\\Log\\LoggerInterface, object given\.$#'
+			identifier: argument.type
+			count: 1
+			path: ../src/Application.php
+
+		-
+			message: '#^Parameter \$handlers of class Sweetchuck\\JunitMergerCli\\Command\\MergeFiles constructor expects array\<string, Sweetchuck\\JunitMerger\\JunitMergerInterface\>, array\<string, object\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: ../src/Application.php
