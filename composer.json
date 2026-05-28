@@ -46,7 +46,7 @@
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-phpunit": "^2.0",
-        "phpunit/phpunit": "^11.0",
+        "phpunit/phpunit": "^12.5",
         "squizlabs/php_codesniffer": "^4.0",
         "sweetchuck/git-hooks": "2.x-dev",
         "sweetchuck/robo-composer": "4.x-dev",
